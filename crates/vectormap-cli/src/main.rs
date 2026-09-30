@@ -106,6 +106,15 @@ enum Cmd {
         #[command(flatten)]
         input: InputArgs,
     },
+    /// Run a Model Context Protocol (MCP) server on stdin/stdout, exposing
+    /// map inspection and editing as tools for Claude Code and other MCP
+    /// clients (see docs/mcp.md).
+    Mcp {
+        /// Map to open when the server starts.
+        file: Option<PathBuf>,
+        #[command(flatten)]
+        input: InputArgs,
+    },
     /// Write one of the built-in sample maps.
     Sample {
         /// Which sample.
@@ -473,6 +482,24 @@ fn run(cli: Cli) -> Result<ExitCode> {
                 .find_nearest_lane(Point2::new(x, y))
                 .context("the map has no lanes")?;
             println!("{}", json::to_pretty_string(&nearest));
+            Ok(ExitCode::SUCCESS)
+        }
+        Cmd::Mcp { file, input } => {
+            let mut session = vectormap_mcp::Session::new();
+            if let Some(path) = file {
+                let format = format_of(&path, input.from)?;
+                let (map, issues) = load(&path, &input)?;
+                print_issues(
+                    &issues
+                        .into_iter()
+                        .filter(|i| i.severity >= Severity::Warning)
+                        .collect::<Vec<_>>(),
+                );
+                eprintln!("vectormap mcp: opened {}", path.display());
+                session.open(map, Some((path, format)));
+            }
+            eprintln!("vectormap mcp: serving on stdio");
+            vectormap_mcp::serve_stdio(&mut vectormap_mcp::Server::with_session(session))?;
             Ok(ExitCode::SUCCESS)
         }
         Cmd::Sample {

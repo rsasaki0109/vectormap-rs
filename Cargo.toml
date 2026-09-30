@@ -4,6 +4,7 @@ members = [
     "crates/vectormap-io",
     "crates/vectormap-validation",
     "crates/vectormap-cli",
+    "crates/vectormap-mcp",
 ]
 resolver = "3"
 
@@ -21,6 +22,7 @@ categories = ["science::robotics", "science::geo"]
 vectormap-core = { path = "crates/vectormap-core", version = "0.1.0" }
 vectormap-io = { path = "crates/vectormap-io", version = "0.1.0" }
 vectormap-validation = { path = "crates/vectormap-validation", version = "0.1.0" }
+vectormap-mcp = { path = "crates/vectormap-mcp", version = "0.1.0" }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.149", features = ["float_roundtrip"] }
 thiserror = "2.0.18"

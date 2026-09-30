@@ -55,7 +55,8 @@ vectormap-rs/
 │   ├── vectormap-core/        # IR, geometry, topology, editing, commands
 │   ├── vectormap-validation/  # structured map validation
 │   ├── vectormap-io/          # JSON IR, Lanelet2 adapter, Autoware profile
-│   └── vectormap-cli/         # `vectormap` binary
+│   ├── vectormap-mcp/         # MCP server: tools over JSON-RPC / stdio, undo
+│   └── vectormap-cli/         # `vectormap` binary (incl. `vectormap mcp`)
 ├── examples/                  # runnable examples (build maps, Autoware export)
 ├── tests/                     # cross-crate integration tests + fixture maps
 └── docs/                      # format notes (IR JSON, Lanelet2 mapping, Autoware)
@@ -64,9 +65,9 @@ vectormap-rs/
 Dependency graph (arrows = "depends on"):
 
 ```text
-vectormap-cli ──> vectormap-io ──> vectormap-core
-      │                 │
-      └──> vectormap-validation ──> vectormap-core
+vectormap-cli ──> vectormap-mcp ──> vectormap-io ──> vectormap-core
+      │                  │
+      └──────────────────┴──> vectormap-validation ──> vectormap-core
 ```
 
 `vectormap-io` does **not** depend on `vectormap-validation`; the shared
@@ -188,8 +189,12 @@ set_speed_limit  set_turn_direction  set_attribute  add_road  add_junction
 (`{"op": "split_lane", "lane": 12, "at": {"fraction": 0.5}}`).
 `map.apply(&cmd)` executes one; `map.apply_all(&cmds)` executes a batch
 atomically (all or nothing). Together with the query API
-(`summary`, `lane_info`, `find_nearest_lane`) this is exactly the surface a
-future MCP server exposes:
+(`summary`, `lane_info`, `find_nearest_lane`) this is exactly the surface the
+MCP server (`vectormap-mcp`, see `docs/mcp.md`) exposes. The server is a
+thin, dependency-free JSON-RPC loop: editing tools add `op` to their
+arguments and deserialize them as a `Command`, so the MCP layer contains no
+editing logic of its own. It keeps one map per session with a bounded undo
+history.
 
 | MCP tool | Library call |
 |---|---|

@@ -37,14 +37,14 @@ impl Map {
         }
         if self.successors(first) != [second] {
             return Err(not_mergeable(format!(
-                "{second} must be the only successor of {first} (successors: {:?})",
-                self.successors(first)
+                "{second} must be the only successor of {first} (successors: [{}])",
+                join_ids(self.successors(first))
             )));
         }
         if self.predecessors(second) != [first] {
             return Err(not_mergeable(format!(
-                "{first} must be the only predecessor of {second} (predecessors: {:?})",
-                self.predecessors(second)
+                "{first} must be the only predecessor of {second} (predecessors: [{}])",
+                join_ids(self.predecessors(second))
             )));
         }
         let (a, b) = (self.lanes[&first].clone(), self.lanes[&second].clone());
@@ -203,6 +203,13 @@ impl Map {
         }
         Ok(cs.finish())
     }
+}
+
+fn join_ids(ids: &[LaneId]) -> String {
+    ids.iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// Replaces `from` by `to` in `list`, avoiding duplicates.
