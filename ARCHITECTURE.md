@@ -284,6 +284,11 @@ Autoware-specific checks (`autoware.*`) live in `vectormap-io::autoware`.
 2. ID allocation is a monotonic counter; imports keep source IDs.
 3. Floating point values are written with Rust's shortest round-trip
    formatting; speed limits are formatted with fixed rounding.
+   Everything computed with basic arithmetic (the IR, JSON, local
+   coordinates) is bit-identical on every platform. Values derived from
+   transcendental functions (lat/lon in Lanelet2 output) are deterministic
+   per platform but may differ in the last bit between math libraries
+   (Linux / macOS / Windows), i.e. by ~1e-11 degrees.
 4. Operations with several candidate results (e.g. ambiguous neighbors) pick
    the smallest ID and emit a warning.
 
