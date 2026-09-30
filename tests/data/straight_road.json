@@ -1,0 +1,146 @@
+{
+  "format": "vectormap-ir",
+  "version": 1,
+  "metadata": {
+    "name": "straight_road",
+    "georeference": {
+      "projection": "utm",
+      "origin": {
+        "lat": 35.681236,
+        "lon": 139.767125,
+        "alt": 0.0
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": 3,
+      "kind": "driving",
+      "left": 1,
+      "right": 2,
+      "speed_limit": {
+        "kmh": 50.0
+      }
+    },
+    {
+      "id": 6,
+      "kind": "driving",
+      "left": 4,
+      "right": 5,
+      "speed_limit": {
+        "kmh": 50.0
+      }
+    },
+    {
+      "id": 9,
+      "kind": "driving",
+      "left": 7,
+      "right": 8,
+      "speed_limit": {
+        "kmh": 50.0
+      }
+    }
+  ],
+  "boundaries": [
+    {
+      "id": 1,
+      "kind": {
+        "type": "lane_marking",
+        "pattern": "solid",
+        "weight": "thin"
+      },
+      "geometry": [
+        [0.0, 1.75, 0.0],
+        [10.0, 1.75, 0.0],
+        [20.0, 1.75, 0.0]
+      ]
+    },
+    {
+      "id": 2,
+      "kind": {
+        "type": "lane_marking",
+        "pattern": "solid",
+        "weight": "thin"
+      },
+      "geometry": [
+        [0.0, -1.75, 0.0],
+        [10.0, -1.75, 0.0],
+        [20.0, -1.75, 0.0]
+      ]
+    },
+    {
+      "id": 4,
+      "kind": {
+        "type": "lane_marking",
+        "pattern": "solid",
+        "weight": "thin"
+      },
+      "geometry": [
+        [20.0, 1.75, 0.0],
+        [30.0, 1.75, 0.0],
+        [40.0, 1.75, 0.0]
+      ]
+    },
+    {
+      "id": 5,
+      "kind": {
+        "type": "lane_marking",
+        "pattern": "solid",
+        "weight": "thin"
+      },
+      "geometry": [
+        [20.0, -1.75, 0.0],
+        [30.0, -1.75, 0.0],
+        [40.0, -1.75, 0.0]
+      ]
+    },
+    {
+      "id": 7,
+      "kind": {
+        "type": "lane_marking",
+        "pattern": "solid",
+        "weight": "thin"
+      },
+      "geometry": [
+        [40.0, 1.75, 0.0],
+        [50.0, 1.75, 0.0],
+        [60.0, 1.75, 0.0]
+      ]
+    },
+    {
+      "id": 8,
+      "kind": {
+        "type": "lane_marking",
+        "pattern": "solid",
+        "weight": "thin"
+      },
+      "geometry": [
+        [40.0, -1.75, 0.0],
+        [50.0, -1.75, 0.0],
+        [60.0, -1.75, 0.0]
+      ]
+    }
+  ],
+  "roads": [
+    {
+      "id": 10,
+      "name": "Main Street",
+      "lanes": [3, 6, 9]
+    }
+  ],
+  "topology": [
+    {
+      "lane": 3,
+      "successors": [6]
+    },
+    {
+      "lane": 6,
+      "predecessors": [3],
+      "successors": [9]
+    },
+    {
+      "lane": 9,
+      "predecessors": [6]
+    }
+  ]
+}

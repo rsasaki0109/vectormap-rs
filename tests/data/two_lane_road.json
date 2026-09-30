@@ -1,0 +1,175 @@
+{
+  "format": "vectormap-ir",
+  "version": 1,
+  "metadata": {
+    "name": "two_lane_road",
+    "georeference": {
+      "projection": "utm",
+      "origin": {
+        "lat": 35.681236,
+        "lon": 139.767125,
+        "alt": 0.0
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": 4,
+      "kind": "driving",
+      "left": 1,
+      "right": 2,
+      "speed_limit": {
+        "kmh": 60.0
+      }
+    },
+    {
+      "id": 5,
+      "kind": "driving",
+      "left": 2,
+      "right": 3,
+      "speed_limit": {
+        "kmh": 60.0
+      }
+    },
+    {
+      "id": 10,
+      "kind": "driving",
+      "left": 7,
+      "right": 8,
+      "speed_limit": {
+        "kmh": 60.0
+      }
+    },
+    {
+      "id": 11,
+      "kind": "driving",
+      "left": 8,
+      "right": 9,
+      "speed_limit": {
+        "kmh": 60.0
+      }
+    }
+  ],
+  "boundaries": [
+    {
+      "id": 1,
+      "kind": {
+        "type": "lane_marking",
+        "pattern": "solid",
+        "weight": "thin"
+      },
+      "geometry": [
+        [0.0, 3.5, 0.0],
+        [15.0, 3.5, 0.0],
+        [30.0, 3.5, 0.0]
+      ]
+    },
+    {
+      "id": 2,
+      "kind": {
+        "type": "lane_marking",
+        "pattern": "dashed",
+        "weight": "thin"
+      },
+      "geometry": [
+        [0.0, 0.0, 0.0],
+        [15.0, 0.0, 0.0],
+        [30.0, 0.0, 0.0]
+      ]
+    },
+    {
+      "id": 3,
+      "kind": {
+        "type": "lane_marking",
+        "pattern": "solid",
+        "weight": "thin"
+      },
+      "geometry": [
+        [0.0, -3.5, 0.0],
+        [15.0, -3.5, 0.0],
+        [30.0, -3.5, 0.0]
+      ]
+    },
+    {
+      "id": 7,
+      "kind": {
+        "type": "lane_marking",
+        "pattern": "solid",
+        "weight": "thin"
+      },
+      "geometry": [
+        [30.0, 3.5, 0.0],
+        [45.0, 3.5, 0.0],
+        [60.0, 3.5, 0.0]
+      ]
+    },
+    {
+      "id": 8,
+      "kind": {
+        "type": "lane_marking",
+        "pattern": "dashed",
+        "weight": "thin"
+      },
+      "geometry": [
+        [30.0, 0.0, 0.0],
+        [45.0, 0.0, 0.0],
+        [60.0, 0.0, 0.0]
+      ]
+    },
+    {
+      "id": 9,
+      "kind": {
+        "type": "lane_marking",
+        "pattern": "solid",
+        "weight": "thin"
+      },
+      "geometry": [
+        [30.0, -3.5, 0.0],
+        [45.0, -3.5, 0.0],
+        [60.0, -3.5, 0.0]
+      ]
+    }
+  ],
+  "roads": [
+    {
+      "id": 6,
+      "name": "Section 1",
+      "lanes": [4, 5]
+    },
+    {
+      "id": 12,
+      "name": "Section 2",
+      "lanes": [10, 11]
+    }
+  ],
+  "topology": [
+    {
+      "lane": 4,
+      "successors": [10],
+      "right": {
+        "lane": 5
+      }
+    },
+    {
+      "lane": 5,
+      "successors": [11],
+      "left": {
+        "lane": 4
+      }
+    },
+    {
+      "lane": 10,
+      "predecessors": [4],
+      "right": {
+        "lane": 11
+      }
+    },
+    {
+      "lane": 11,
+      "predecessors": [5],
+      "left": {
+        "lane": 10
+      }
+    }
+  ]
+}

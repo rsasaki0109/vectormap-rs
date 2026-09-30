@@ -1,0 +1,24 @@
+[package]
+name = "vectormap-io"
+description = "Readers and writers for vectormap-rs: JSON IR, Lanelet2 OSM XML and the Autoware profile."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+vectormap-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+roxmltree.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Hand-written JOSM-style Lanelet2 map: straight road A -> B -> C (negative IDs, lat/lon only). -->
+<osm version="0.6" generator="JOSM">
+  <node id="-1" lat="49.0000157360" lon="8.4000000000"><tag k="ele" v="0.5"/></node>
+  <node id="-2" lat="49.0000157360" lon="8.4002733295"><tag k="ele" v="0.5"/></node>
+  <node id="-3" lat="49.0000157360" lon="8.4005466589"><tag k="ele" v="0.5"/></node>
+  <node id="-4" lat="49.0000157360" lon="8.4008199884"><tag k="ele" v="0.5"/></node>
+  <node id="-5" lat="48.9999842640" lon="8.4000000000"><tag k="ele" v="0.5"/></node>
+  <node id="-6" lat="48.9999842640" lon="8.4002733295"><tag k="ele" v="0.5"/></node>
+  <node id="-7" lat="48.9999842640" lon="8.4005466589"><tag k="ele" v="0.5"/></node>
+  <node id="-8" lat="48.9999842640" lon="8.4008199884"><tag k="ele" v="0.5"/></node>
+  <node id="-9" lat="49.0000157360" lon="8.4008199884"><tag k="ele" v="0.5"/></node>
+  <node id="-10" lat="48.9999842640" lon="8.4008199884"><tag k="ele" v="0.5"/></node>
+  <node id="-11" lat="48.9999775199" lon="8.4008268217"><tag k="ele" v="2.5"/></node>
+  <node id="-12" lat="48.9999775199" lon="8.4008350215"><tag k="ele" v="2.5"/></node>
+  <node id="-13" lat="49.0000449601" lon="8.4001366647"><tag k="ele" v="0.5"/></node>
+  <node id="-14" lat="49.0000449601" lon="8.4002049971"><tag k="ele" v="0.5"/></node>
+  <node id="-15" lat="49.0000719362" lon="8.4002049971"><tag k="ele" v="0.5"/></node>
+  <way id="-101">
+    <nd ref="-1"/>
+    <nd ref="-2"/>
+    <tag k="type" v="line_thin"/>
+    <tag k="subtype" v="solid"/>
+  </way>
+  <way id="-102">
+    <nd ref="-3"/>
+    <nd ref="-2"/>
+    <tag k="type" v="line_thin"/>
+    <tag k="subtype" v="solid"/>
+  </way>
+  <way id="-103">
+    <nd ref="-3"/>
+    <nd ref="-4"/>
+    <tag k="type" v="line_thin"/>
+    <tag k="subtype" v="solid"/>
+  </way>
+  <way id="-111">
+    <nd ref="-5"/>
+    <nd ref="-6"/>
+    <tag k="type" v="curbstone"/>
+    <tag k="subtype" v="high"/>
+  </way>
+  <way id="-112">
+    <nd ref="-6"/>
+    <nd ref="-7"/>
+    <tag k="type" v="curbstone"/>
+    <tag k="subtype" v="low"/>
+  </way>
+  <way id="-113">
+    <nd ref="-7"/>
+    <nd ref="-8"/>
+    <tag k="type" v="curbstone"/>
+    <tag k="subtype" v="high"/>
+  </way>
+  <way id="-120">
+    <nd ref="-9"/>
+    <nd ref="-10"/>
+    <tag k="type" v="stop_line"/>
+  </way>
+  <way id="-121">
+    <nd ref="-11"/>
+    <nd ref="-12"/>
+    <tag k="type" v="traffic_sign"/>
+    <tag k="subtype" v="stop_sign"/>
+  </way>
+  <way id="-130">
+    <nd ref="-13"/>
+    <nd ref="-14"/>
+    <nd ref="-15"/>
+    <nd ref="-13"/>
+    <tag k="type" v="parking_space"/>
+    <tag k="area" v="yes"/>
+  </way>
+  <relation id="-201">
+    <member type="way" ref="-101" role="left"/>
+    <member type="way" ref="-111" role="right"/>
+    <tag k="type" v="lanelet"/>
+    <tag k="subtype" v="road"/>
+    <tag k="location" v="urban"/>
+    <tag k="one_way" v="yes"/>
+    <tag k="speed_limit" v="50 km/h"/>
+    <tag k="participant:vehicle" v="yes"/>
+  </relation>
+  <relation id="-202">
+    <member type="way" ref="-102" role="left"/>
+    <member type="way" ref="-112" role="right"/>
+    <tag k="type" v="lanelet"/>
+    <tag k="subtype" v="road"/>
+    <tag k="location" v="urban"/>
+    <tag k="one_way" v="yes"/>
+    <tag k="speed_limit" v="50"/>
+  </relation>
+  <relation id="-203">
+    <member type="way" ref="-103" role="left"/>
+    <member type="way" ref="-113" role="right"/>
+    <member type="relation" ref="-301" role="regulatory_element"/>
+    <tag k="type" v="lanelet"/>
+    <tag k="subtype" v="highway"/>
+    <tag k="location" v="nonurban"/>
+    <tag k="speed_limit" v="30.00"/>
+  </relation>
+  <relation id="-301">
+    <member type="way" ref="-121" role="refers"/>
+    <member type="way" ref="-120" role="ref_line"/>
+    <tag k="type" v="regulatory_element"/>
+    <tag k="subtype" v="traffic_sign"/>
+  </relation>
+  <relation id="-401">
+    <member type="way" ref="-130" role="outer"/>
+    <tag k="type" v="multipolygon"/>
+    <tag k="subtype" v="parking"/>
+  </relation>
+</osm>

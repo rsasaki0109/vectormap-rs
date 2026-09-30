@@ -1,0 +1,64 @@
+[workspace]
+members = [
+    "crates/vectormap-core",
+    "crates/vectormap-io",
+    "crates/vectormap-validation",
+    "crates/vectormap-cli",
+]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "Apache-2.0"
+repository = "https://github.com/rsasaki0109/vectormap-rs"
+authors = ["vectormap-rs contributors"]
+keywords = ["autonomous-driving", "robotics", "hd-map", "lanelet2", "autoware"]
+categories = ["science::robotics", "science::geo"]
+
+[workspace.dependencies]
+vectormap-core = { path = "crates/vectormap-core", version = "0.1.0" }
+vectormap-io = { path = "crates/vectormap-io", version = "0.1.0" }
+vectormap-validation = { path = "crates/vectormap-validation", version = "0.1.0" }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = { version = "1.0.149", features = ["float_roundtrip"] }
+thiserror = "2.0.18"
+roxmltree = "0.21.1"
+clap = { version = "4.6.1", features = ["derive"] }
+anyhow = "1.0.102"
+tempfile = "3.27.0"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+# The root package is a thin facade that re-exports the workspace crates.
+# It also hosts the cross-crate `examples/` and `tests/`.
+[package]
+name = "vectormap"
+description = "A Rust-native vector map toolkit for autonomous driving and robotics."
+readme = "README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+vectormap-core.workspace = true
+vectormap-io.workspace = true
+vectormap-validation.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true
