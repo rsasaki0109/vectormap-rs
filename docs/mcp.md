@@ -49,6 +49,9 @@ stderr; stdout carries only JSON-RPC.
 | `get_entity` | read-only | raw JSON of any entity |
 | `find_nearest_lane` | read-only | nearest lane to `x, y` (local metres) or `lat, lon` |
 | `validate_map` | read-only | structured issues with fix commands (`autoware: true` for Autoware checks) |
+| `build_road` | edit | a whole road along a reference line: lanes left to right, both directions, shared boundaries, neighbors, optional pieces |
+| `add_connector` | edit | a smooth lane from the end of one lane to the start of another (turn direction derived) |
+| `set_boundary_geometry` | edit | replace a boundary's line, e.g. snap it to an observed marking |
 | `create_lane` | edit | from a centreline + width, beside an existing lane, or from boundaries |
 | `remove_lane` | edit | remove a lane and its references |
 | `split_lane` | edit | split at a fraction / station (neighbors split too) |
@@ -88,6 +91,20 @@ Codes: `no_map`, `invalid_arguments`, `io_error`, `nothing_to_undo`,
 `not_found`, and the editing errors `invalid_argument`, `invalid_geometry`,
 `already_exists`, `in_use`, `not_mergeable`. A failed edit never changes the
 map.
+
+## Building a map from scratch
+
+1. `new_map {"name": "site"}`
+2. `build_road {"reference": [[0,0],[120,0]], "lanes": [{"width": 3.5}, {"width": 3.5, "direction": "backward"}], "segment_length": 40, "speed_limit": {"kmh": 40}}`
+   → the new lanes, one chain per lane of the cross-section
+3. `build_road` again for the crossing road, then `add_connector {"from": ..., "to": ...}`
+   for each turn through the junction
+4. `add_stop_line`, `add_traffic_light`, `add_crosswalk` as needed
+5. `validate_map {"autoware": true}`, then `export_lanelet2 {"path": "out/lanelet2_map.osm", "autoware": true}`
+
+Reference lines can come from anywhere: a driven trajectory, a road centre
+drawn over aerial imagery, or lane markings extracted from a point cloud
+(pass those as `boundaries`).
 
 ## Typical session
 

@@ -467,3 +467,56 @@ fn reload_via_file(map: &Map, dir: &std::path::Path, name: &str) -> Map {
     assert_valid(&loaded.map, name);
     loaded.map
 }
+
+/// A road built from a reference line, cut into pieces, with a turning
+/// connector, keeps its topology through the Autoware profile: Lanelet2
+/// re-derives successors and neighbors from the shared geometry.
+#[test]
+fn built_roads_keep_their_topology_in_autoware_lanelet2() {
+    let mut map = Map::new();
+    let mut east = NewRoad::new(
+        Polyline3::from_xy(&[[-80.0, 0.0], [-40.0, 1.0], [0.0, 0.0]]),
+        vec![
+            RoadLane::new(3.5, LaneDirection::Forward),
+            RoadLane::new(3.5, LaneDirection::Forward),
+            RoadLane::new(3.25, LaneDirection::Backward),
+        ],
+    );
+    east.segment_length = Some(25.0);
+    east.resample = Some(2.0);
+    east.speed_limit = Some(SpeedLimit::from_kmh(40.0));
+    let (east, _) = map.build_road(east).unwrap();
+    let mut north = NewRoad::new(
+        Polyline3::from_xy(&[[15.0, 12.0], [15.0, 60.0]]),
+        vec![RoadLane::new(3.5, LaneDirection::Forward)],
+    );
+    north.speed_limit = Some(SpeedLimit::from_kmh(30.0));
+    let (north, _) = map.build_road(north).unwrap();
+    let from = *east.lanes[1].last().unwrap();
+    map.add_connector(NewConnector::new(from, north.lanes[0][0]))
+        .unwrap();
+    assert_valid(&map, "built");
+    let problems: Vec<_> = autoware::check(&map)
+        .into_iter()
+        .filter(|i| i.severity != Severity::Info)
+        .collect();
+    assert!(problems.is_empty(), "{problems:#?}");
+
+    let (osm, _) = lanelet2::write_string(&map, &SaveOptions::autoware());
+    let back = read(&osm, ProjectionChoice::Auto).map;
+    assert_eq!(back.topology(), map.topology());
+    assert_eq!(back.lane_count(), map.lane_count());
+    for lane in map.lanes() {
+        let other = back.lane(lane.id).unwrap();
+        assert_eq!(other.speed_limit, lane.speed_limit);
+        assert_eq!(other.turn_direction, lane.turn_direction);
+        let (a, b) = (
+            map.centerline(lane.id).unwrap(),
+            back.centerline(lane.id).unwrap(),
+        );
+        assert_eq!(a.points.len(), b.points.len());
+        for (p, q) in a.points.iter().zip(&b.points) {
+            assert!(p.distance(*q) < 1e-6, "{}: {p:?} != {q:?}", lane.id);
+        }
+    }
+}

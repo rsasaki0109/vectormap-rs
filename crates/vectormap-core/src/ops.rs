@@ -14,11 +14,11 @@
 use serde::{Deserialize, Serialize};
 
 use crate::edit::{
-    ChangeSet, EditError, NewCrosswalk, NewLane, NewStopLine, NewTrafficSignal, SplitAt,
-    SplitOptions,
+    ChangeSet, EditError, NewConnector, NewCrosswalk, NewLane, NewRoad, NewStopLine,
+    NewTrafficSignal, SplitAt, SplitOptions,
 };
 use crate::entities::{BoundaryKind, LaneKind, Side, SpeedLimit, TurnDirection};
-use crate::geometry::Polygon3;
+use crate::geometry::{Polygon3, Polyline3};
 use crate::id::{BoundaryId, EntityRef, LaneId};
 use crate::map::Map;
 use crate::topology::Neighbor;
@@ -33,6 +33,10 @@ fn default_true() -> bool {
 pub enum Command {
     /// [`Map::add_lane`]
     AddLane(NewLane),
+    /// [`Map::build_road`]
+    BuildRoad(NewRoad),
+    /// [`Map::add_connector`]
+    AddConnector(NewConnector),
     /// [`Map::remove_lane`]
     RemoveLane {
         /// Lane to remove.
@@ -120,6 +124,13 @@ pub enum Command {
         /// New kind.
         kind: BoundaryKind,
     },
+    /// [`Map::set_boundary_geometry`]
+    SetBoundaryGeometry {
+        /// Boundary.
+        boundary: BoundaryId,
+        /// New geometry, in the boundary's own direction.
+        geometry: Polyline3,
+    },
     /// [`Map::set_attribute`]
     SetAttribute {
         /// Entity.
@@ -156,6 +167,8 @@ impl Command {
     pub fn name(&self) -> &'static str {
         match self {
             Command::AddLane(_) => "add_lane",
+            Command::BuildRoad(_) => "build_road",
+            Command::AddConnector(_) => "add_connector",
             Command::RemoveLane { .. } => "remove_lane",
             Command::RemoveEntity { .. } => "remove_entity",
             Command::ConnectLanes { .. } => "connect_lanes",
@@ -170,6 +183,7 @@ impl Command {
             Command::SetTurnDirection { .. } => "set_turn_direction",
             Command::SetLaneKind { .. } => "set_lane_kind",
             Command::SetBoundaryKind { .. } => "set_boundary_kind",
+            Command::SetBoundaryGeometry { .. } => "set_boundary_geometry",
             Command::SetAttribute { .. } => "set_attribute",
             Command::AddRoad { .. } => "add_road",
             Command::AddJunction { .. } => "add_junction",
@@ -194,6 +208,8 @@ impl Map {
     pub fn apply(&mut self, command: &Command) -> Result<ChangeSet, EditError> {
         match command.clone() {
             Command::AddLane(spec) => self.add_lane(spec).map(|(_, cs)| cs),
+            Command::BuildRoad(spec) => self.build_road(spec).map(|(_, cs)| cs),
+            Command::AddConnector(spec) => self.add_connector(spec).map(|(_, cs)| cs),
             Command::RemoveLane { lane } => self.remove_lane(lane),
             Command::RemoveEntity { entity } => self.remove_entity(entity),
             Command::ConnectLanes { from, to } => self.connect(from, to),
@@ -223,6 +239,9 @@ impl Map {
             } => self.set_turn_direction(lane, turn_direction),
             Command::SetLaneKind { lane, kind } => self.set_lane_kind(lane, kind),
             Command::SetBoundaryKind { boundary, kind } => self.set_boundary_kind(boundary, kind),
+            Command::SetBoundaryGeometry { boundary, geometry } => {
+                self.set_boundary_geometry(boundary, geometry)
+            }
             Command::SetAttribute { entity, key, value } => {
                 self.set_attribute(entity, &key, value.as_deref())
             }

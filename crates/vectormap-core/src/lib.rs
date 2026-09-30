@@ -47,9 +47,9 @@ pub use attributes::Attributes;
 pub use diagnostics::{Issue, IssueCode, Severity};
 pub use document::{DocumentError, MapDocument, TopologyEntry};
 pub use edit::{
-    BoundarySpec, ChangeSet, CrosswalkGeometry, EditError, EditResult, LaneGeometry, NewCrosswalk,
-    NewLane, NewStopLine, NewTrafficSignal, SplitAt, SplitOptions, StopLineChoice,
-    StopLinePlacement, StopRule,
+    BoundarySpec, BuiltRoad, ChangeSet, CrosswalkGeometry, EditError, EditResult, LaneDirection,
+    LaneGeometry, NewConnector, NewCrosswalk, NewLane, NewRoad, NewStopLine, NewTrafficSignal,
+    RoadLane, SplitAt, SplitOptions, StopLineChoice, StopLinePlacement, StopRule,
 };
 pub use entities::{
     Boundary, BoundaryKind, BoundaryRef, BulbArrow, BulbColor, Crosswalk, Junction, Lane, LaneKind,
@@ -75,9 +75,10 @@ pub mod prelude {
     pub use crate::{
         Attributes, Boundary, BoundaryId, BoundaryKind, BoundaryRef, ChangeSet, Command, Crosswalk,
         CrosswalkId, EditError, EntityKind, EntityRef, GeoPoint, GeoReference, Issue, Junction,
-        JunctionId, Lane, LaneId, LaneKind, Map, Neighbor, NewCrosswalk, NewLane, NewStopLine,
-        NewTrafficSignal, Point2, Point3, Polygon2, Polygon3, Polyline2, Polyline3, ProjectionKind,
-        RegulatoryElement, RegulatoryElementId, Road, RoadId, Rule, Severity, Side, SignalId,
-        SpeedLimit, SplitAt, SplitOptions, StopLine, StopLineId, TrafficSignal, TurnDirection,
+        JunctionId, Lane, LaneDirection, LaneId, LaneKind, Map, Neighbor, NewConnector,
+        NewCrosswalk, NewLane, NewRoad, NewStopLine, NewTrafficSignal, Point2, Point3, Polygon2,
+        Polygon3, Polyline2, Polyline3, ProjectionKind, RegulatoryElement, RegulatoryElementId,
+        Road, RoadId, RoadLane, Rule, Severity, Side, SignalId, SpeedLimit, SplitAt, SplitOptions,
+        StopLine, StopLineId, TrafficSignal, TurnDirection,
     };
 }

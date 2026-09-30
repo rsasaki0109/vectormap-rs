@@ -13,6 +13,7 @@
 mod features;
 mod lane;
 mod merge;
+mod road;
 mod split;
 
 use serde::{Deserialize, Serialize};
@@ -30,6 +31,7 @@ pub use features::{
     NewCrosswalk, NewStopLine, NewTrafficSignal, StopLineChoice, StopLinePlacement, StopRule,
 };
 pub use lane::{BoundarySpec, LaneGeometry, NewLane};
+pub use road::{BuiltRoad, LaneDirection, NewConnector, NewRoad, RoadLane, TURN_THRESHOLD_DEG};
 pub use split::{MIN_PIECE_LENGTH, SplitAt, SplitOptions};
 
 /// Summary of the effects of an editing operation.

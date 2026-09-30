@@ -21,6 +21,9 @@ tools:
 | `get_map_summary` | `map.summary()` → `MapSummary` |
 | `get_lane` | `map.lane_info(id)` → `LaneInfo` |
 | `find_nearest_lane` | `map.find_nearest_lane(point)` → `NearestLane` |
+| `build_road` | `Command::BuildRoad` |
+| `add_connector` | `Command::AddConnector` |
+| `set_boundary_geometry` | `Command::SetBoundaryGeometry` |
 | `create_lane` | `Command::AddLane` |
 | `split_lane` | `Command::SplitLane` |
 | `merge_lanes` | `Command::MergeLanes` |
@@ -83,6 +86,45 @@ Codes: `not_found`, `already_exists`, `invalid_argument`,
 ## Command reference
 
 All commands are JSON objects with an `op` field.
+
+### Building roads
+
+```json
+{"op": "build_road", "reference": [[0,0,0],[60,0.5,0],[120,0,0]],
+ "lanes": [{"width": 3.5}, {"width": 3.5}, {"width": 3.25, "direction": "backward"}],
+ "segment_length": 40, "speed_limit": {"kmh": 40}}
+
+{"op": "build_road", "reference": [[0,0,0],[50,0,0]], "lanes": [{}],
+ "boundaries": [[[0,1.8,0],[25,1.9,0],[50,1.7,0]], [[0,-1.7,0],[50,-1.8,0]]]}
+
+{"op": "add_connector", "from": 6, "to": 9}
+{"op": "add_connector", "from": 6, "to": 9, "turn_direction": "left", "junction": 30}
+
+{"op": "set_boundary_geometry", "boundary": 5, "geometry": [[0,1.9,0],[30,2.0,0]]}
+```
+
+- `build_road` puts lanes side by side along a reference line (a road
+  centre, a driven path, a surveyed edge). `lanes` go from left to right
+  looking along the line; `direction` is `forward` (along it, default) or
+  `backward`. With widths, the road is centred on the line unless
+  `left_edge` gives the lateral position of its left edge (positive =
+  left); `boundaries` gives the lines explicitly instead (left to right, one
+  more than lanes; reversed if they run against the reference line).
+  Boundaries are shared and get kinds (`edge_kind` solid,
+  `lane_line_kind` dashed between lanes of one direction,
+  `center_line_kind` solid between the directions); neighbor relations are
+  set for both directions. `segment_length` cuts the road into connected
+  pieces, `resample` thins a dense line first, `name` also creates a road
+  entity.
+- `add_connector` joins the end of `from` to the start of `to` with a lane
+  whose boundaries are smooth curves meeting both lanes exactly (so
+  Lanelet2 keeps the links); `turn_direction` comes from the change of
+  heading (more than 30° is a turn) unless given, the speed limit is the
+  lower of the two, boundaries are `virtual` unless `boundary_kind` is
+  given.
+- `set_boundary_geometry` replaces a boundary's line (given in the
+  boundary's own direction), e.g. to snap it to an observed marking; it
+  warns (`geometric_gap`) when lanes no longer meet.
 
 ### Lanes and topology
 
