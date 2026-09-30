@@ -215,3 +215,56 @@ fn unknown_format_is_a_usage_error() {
     assert_eq!(o.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&o.stderr).contains("cannot determine the format"));
 }
+
+#[test]
+fn mcp_server_over_stdio() {
+    use std::io::Write;
+    use std::process::Stdio;
+
+    let dir = tempfile::tempdir().unwrap();
+    let map = dir.path().join("map.osm");
+    let out = dir.path().join("edited.osm");
+    assert!(
+        vectormap(&["sample", "straight-road", path(&map)])
+            .status
+            .success()
+    );
+
+    let mut child = Command::new(env!("CARGO_BIN_EXE_vectormap"))
+        .args(["mcp", path(&map)])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let requests = [
+        serde_json::json!({"jsonrpc": "2.0", "id": 1, "method": "initialize",
+                           "params": {"protocolVersion": "2025-06-18", "capabilities": {},
+                                      "clientInfo": {"name": "test", "version": "0"}}}),
+        serde_json::json!({"jsonrpc": "2.0", "method": "notifications/initialized"}),
+        serde_json::json!({"jsonrpc": "2.0", "id": 2, "method": "tools/call",
+                           "params": {"name": "set_speed_limit", "arguments": {"lanes": [3], "kmh": 20}}}),
+        serde_json::json!({"jsonrpc": "2.0", "id": 3, "method": "tools/call",
+                           "params": {"name": "save_map", "arguments": {"path": out}}}),
+    ];
+    {
+        let stdin = child.stdin.as_mut().unwrap();
+        for r in &requests {
+            writeln!(stdin, "{r}").unwrap();
+        }
+    }
+    drop(child.stdin.take());
+    let output = child.wait_with_output().unwrap();
+    assert!(output.status.success(), "{output:?}");
+    let replies: Vec<serde_json::Value> = String::from_utf8(output.stdout)
+        .unwrap()
+        .lines()
+        .map(|l| serde_json::from_str(l).expect("stdout carries only JSON-RPC"))
+        .collect();
+    assert_eq!(replies.len(), 3);
+    assert_eq!(replies[0]["result"]["protocolVersion"], "2025-06-18");
+    assert_eq!(replies[1]["result"]["isError"], false);
+    assert_eq!(replies[2]["result"]["isError"], false);
+    let text = std::fs::read_to_string(&out).unwrap();
+    assert!(text.contains(r#"<tag k="speed_limit" v="20"/>"#));
+}

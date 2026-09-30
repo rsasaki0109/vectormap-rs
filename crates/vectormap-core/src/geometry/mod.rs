@@ -29,8 +29,10 @@ pub struct Point2 {
 }
 
 /// A 3D point / vector.
+///
+/// Serializes as `[x, y, z]`; also deserializes from `[x, y]` (z = 0).
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
-#[serde(from = "[f64; 3]", into = "[f64; 3]")]
+#[serde(try_from = "Vec<f64>", into = "[f64; 3]")]
 pub struct Point3 {
     /// X coordinate (metres).
     pub x: f64,
@@ -150,6 +152,18 @@ impl From<Point2> for [f64; 2] {
 impl From<[f64; 3]> for Point3 {
     fn from([x, y, z]: [f64; 3]) -> Self {
         Point3::new(x, y, z)
+    }
+}
+
+impl TryFrom<Vec<f64>> for Point3 {
+    type Error = String;
+
+    fn try_from(v: Vec<f64>) -> Result<Self, Self::Error> {
+        match v.as_slice() {
+            [x, y] => Ok(Point3::new(*x, *y, 0.0)),
+            [x, y, z] => Ok(Point3::new(*x, *y, *z)),
+            _ => Err(format!("a point needs 2 or 3 coordinates, got {}", v.len())),
+        }
     }
 }
 
@@ -318,6 +332,10 @@ mod tests {
         assert_eq!(serde_json::to_string(&p).unwrap(), "[1.0,2.5,-3.0]");
         let q: Point2 = serde_json::from_str("[4,5]").unwrap();
         assert_eq!(q, Point2::new(4.0, 5.0));
+        let r: Point3 = serde_json::from_str("[4,5]").unwrap();
+        assert_eq!(r, Point3::new(4.0, 5.0, 0.0));
+        assert!(serde_json::from_str::<Point3>("[1]").is_err());
+        assert!(serde_json::from_str::<Point3>("[1,2,3,4]").is_err());
     }
 
     #[test]

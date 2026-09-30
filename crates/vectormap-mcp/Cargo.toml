@@ -1,6 +1,6 @@
 [package]
-name = "vectormap-cli"
-description = "The `vectormap` command line tool: inspect, validate, convert and edit vector maps."
+name = "vectormap-mcp"
+description = "Model Context Protocol (MCP) server exposing vectormap-rs map editing as high-level tools."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,20 +10,12 @@ authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
 
-[[bin]]
-name = "vectormap"
-path = "src/main.rs"
-doc = false
-
 [dependencies]
 vectormap-core.workspace = true
 vectormap-io.workspace = true
 vectormap-validation.workspace = true
-vectormap-mcp.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-clap.workspace = true
-anyhow.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

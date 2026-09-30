@@ -18,7 +18,8 @@ flowchart LR
     CORE --> EDIT[editing / commands]
     CORE --> CONV[conversion]
     IO --> AW[Autoware map<br/>lanelet2_map.osm +<br/>map_projector_info.yaml]
-    AGENT[Claude Code / MCP<br/><i>planned</i>] -. high-level commands .-> EDIT
+    AGENT[Claude Code] -- MCP tools --> MCP[vectormap mcp]
+    MCP -- high-level commands --> EDIT
 ```
 
 ## Motivation
@@ -71,7 +72,11 @@ it*:
   crosswalks, intersection areas, speed limits, local coordinates.
 - **JSON IR** — lossless, deterministic, readable by humans and LLMs.
 - **Deterministic** — same input + same commands ⇒ byte-identical output.
-- **CLI** — `vectormap info | validate | convert | edit | lane | nearest | sample`.
+- **MCP server** — `vectormap mcp` exposes the map to Claude Code and other
+  MCP clients as 22 tools (`get_map_summary`, `find_nearest_lane`,
+  `split_lane`, `add_traffic_light`, `validate_map`, `export_lanelet2`, ...)
+  with undo; see [docs/mcp.md](docs/mcp.md).
+- **CLI** — `vectormap info | validate | convert | edit | lane | nearest | sample | mcp`.
 
 ## Architecture
 
@@ -81,6 +86,7 @@ vectormap-rs/
 │   ├── vectormap-core/        IR, geometry, topology, editing, commands, queries
 │   ├── vectormap-validation/  structured validation
 │   ├── vectormap-io/          JSON IR, Lanelet2 adapter, Autoware profile, projection
+│   ├── vectormap-mcp/         MCP server (JSON-RPC over stdio, tools, undo)
 │   └── vectormap-cli/         the `vectormap` binary
 ├── src/lib.rs                 `vectormap` facade crate re-exporting the above
 ├── examples/                  quickstart, commands (MCP-style), Autoware map
@@ -169,7 +175,18 @@ vectormap edit map.osm commands.json -o edited.osm   # atomic batch, prints chan
 vectormap lane map.osm 12                            # everything about lane 12
 vectormap nearest map.osm 25.0 -1.5                  # nearest lane to a point
 vectormap sample intersection demo.osm               # built-in sample maps
+vectormap mcp [map.osm]                              # MCP server on stdio
 ```
+
+### Claude Code
+
+```bash
+claude mcp add vectormap -- vectormap mcp
+```
+
+Then ask, e.g., *"open examples/autoware/lanelet2_map.osm, split the lane
+nearest to (20, 1.5) in the middle, validate it and export it for Autoware
+to out/lanelet2_map.osm"*. Details: [docs/mcp.md](docs/mcp.md).
 
 Formats are detected from the extension (`.osm` → Lanelet2, `.json` → IR) or
 given with `--from` / `--to`. Lanelet2 input options: `--origin LAT,LON`
@@ -185,7 +202,7 @@ given with `--from` / `--to`. Lanelet2 input options: `--origin LAT,LON`
 | OpenDRIVE | — | — | planned |
 | GeoJSON | — | — | planned |
 
-More documentation: [commands (MCP-ready API)](docs/commands.md),
+More documentation: [MCP server](docs/mcp.md), [commands](docs/commands.md),
 [validation codes](docs/validation.md).
 
 ## Roadmap
@@ -198,7 +215,7 @@ More documentation: [commands (MCP-ready API)](docs/commands.md),
 - [ ] Point cloud assisted map creation
 - [ ] ROS 2 integration
 - [ ] Autoware integration tests
-- [ ] MCP server
+- [x] MCP server
 - [ ] Claude Code map editing
 
 Also on the list: MGRS projection output, detection areas / no-stopping

@@ -11,7 +11,10 @@ agent ── get_map_summary / get_lane / find_nearest_lane / validate_map ─�
 agent ── {"op": "split_lane", ...} ──▶ Map::apply ──▶ ChangeSet | EditError
 ```
 
-## Future MCP tools → library calls
+## MCP tools → library calls
+
+The MCP server (`vectormap mcp`, see [mcp.md](mcp.md)) exposes these as
+tools:
 
 | MCP tool | Call |
 |---|---|

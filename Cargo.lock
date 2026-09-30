@@ -364,6 +364,7 @@ dependencies = [
  "tempfile",
  "vectormap-core",
  "vectormap-io",
+ "vectormap-mcp",
  "vectormap-validation",
 ]
 
@@ -386,6 +387,18 @@ dependencies = [
  "tempfile",
  "thiserror",
  "vectormap-core",
+]
+
+[[package]]
+name = "vectormap-mcp"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "vectormap-core",
+ "vectormap-io",
+ "vectormap-validation",
 ]
 
 [[package]]
