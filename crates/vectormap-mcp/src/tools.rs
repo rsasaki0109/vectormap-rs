@@ -55,6 +55,9 @@ impl ToolDef {
 
 /// Editing tools and the command `op` they map to.
 const EDIT_TOOLS: &[(&str, &str)] = &[
+    ("build_road", "build_road"),
+    ("add_connector", "add_connector"),
+    ("set_boundary_geometry", "set_boundary_geometry"),
     ("create_lane", "add_lane"),
     ("remove_lane", "remove_lane"),
     ("split_lane", "split_lane"),
@@ -294,6 +297,69 @@ pub fn definitions() -> Vec<ToolDef> {
             destructive: false,
         },
         ToolDef {
+            name: "build_road",
+            title: "Build road",
+            description: "Build a whole road from a reference line (a road centre, a driven path, a surveyed edge): lanes side by side, left to right looking along the line, each forward (along it) or backward. Boundaries are shared, neighbor relations (same or opposite direction) and boundary kinds (solid edges, dashed lane lines, solid centre line) are set. Give lane widths (the road is centred on the line unless left_edge says where its left edge is), or explicit boundary lines from left to right (one more than lanes), e.g. lane markings found in a point cloud. segment_length cuts the road into connected pieces; resample thins a dense line. The result lists the new lanes; call list_lanes for details. For left-hand traffic (Japan, UK) put forward lanes on the left, for right-hand traffic on the right.",
+            input_schema: object(
+                json!({
+                    "reference": polyline("reference line"),
+                    "lanes": {
+                        "type": "array", "minItems": 1,
+                        "description": "lanes from left to right looking along the reference line",
+                        "items": object(json!({
+                            "width": {"type": "number", "exclusiveMinimum": 0, "description": "metres; required without boundaries"},
+                            "direction": {"enum": ["forward", "backward"], "description": "default forward"},
+                            "kind": {"enum": ["driving", "shoulder", "bus", "bicycle", "walkway", "parking", "emergency", "other"]}
+                        }), &[])
+                    },
+                    "left_edge": {"type": "number", "description": "lateral position of the road's left edge from the reference line (metres, positive = left); default: centred"},
+                    "boundaries": {"type": "array", "items": polyline("boundary line"), "description": "explicit boundary lines from left to right, one more than lanes; replaces widths and left_edge"},
+                    "resample": {"type": "number", "exclusiveMinimum": 0, "description": "resample the lines at this spacing (metres) first"},
+                    "segment_length": {"type": "number", "exclusiveMinimum": 0, "description": "cut into connected pieces of about this length (metres)"},
+                    "speed_limit": object(json!({"kmh": {"type": "number", "exclusiveMinimum": 0}}), &["kmh"]),
+                    "edge_kind": boundary_kind(),
+                    "lane_line_kind": boundary_kind(),
+                    "center_line_kind": boundary_kind(),
+                    "name": {"type": "string", "description": "also create a named road entity (not exported to Lanelet2)"}
+                }),
+                &["reference", "lanes"],
+            ),
+            read_only: false,
+            destructive: false,
+        },
+        ToolDef {
+            name: "add_connector",
+            title: "Add connector lane",
+            description: "Join the end of lane `from` to the start of lane `to` with a new lane whose boundaries curve smoothly between them (as inside a junction), connected both ways. turn_direction (straight/left/right) is derived from the change of heading unless given; the speed limit defaults to the lower of the two lanes'; boundaries are virtual unless boundary_kind is given.",
+            input_schema: object(
+                json!({
+                    "from": id("lane the connector starts from (at its end)"),
+                    "to": id("lane the connector leads to (at its start)"),
+                    "turn_direction": {"enum": ["straight", "left", "right"]},
+                    "junction": id("junction to add the connector to"),
+                    "speed_limit": object(json!({"kmh": {"type": "number", "exclusiveMinimum": 0}}), &["kmh"]),
+                    "boundary_kind": boundary_kind()
+                }),
+                &["from", "to"],
+            ),
+            read_only: false,
+            destructive: false,
+        },
+        ToolDef {
+            name: "set_boundary_geometry",
+            title: "Set boundary geometry",
+            description: "Replace the line of a boundary, e.g. to snap it to an observed lane marking, in the boundary's own direction (see get_entity). Warns when a lane using it no longer meets its predecessors or successors.",
+            input_schema: object(
+                json!({
+                    "boundary": id("boundary"),
+                    "geometry": polyline("new line, in the boundary's own direction")
+                }),
+                &["boundary", "geometry"],
+            ),
+            read_only: false,
+            destructive: false,
+        },
+        ToolDef {
             name: "create_lane",
             title: "Create lane",
             description: "Create a lane. geometry is one of: {\"centerline\": {\"centerline\": [[x,y],...], \"width\": 3.5}}; {\"beside_lane\": {\"lane\": ID, \"side\": \"left\"|\"right\", \"width\": 3.5}} (shares that lane's boundary and becomes its neighbor); {\"boundaries\": {\"left\": {\"existing\": BOUNDARY_ID} | {\"new\": {\"geometry\": [...]}}, \"right\": ...}}. Optionally connect predecessors/successors and set speed limit.",
@@ -479,7 +545,7 @@ pub fn definitions() -> Vec<ToolDef> {
         ToolDef {
             name: "apply_commands",
             title: "Apply commands",
-            description: "Apply a list of vectormap commands atomically (all or nothing). Each command is an object with an `op` field: add_lane, remove_lane, remove_entity, connect_lanes, disconnect_lanes, set_neighbor, split_lane, merge_lanes, add_stop_line, add_traffic_signal, add_crosswalk, set_speed_limit, set_turn_direction, set_lane_kind, set_boundary_kind, set_attribute, add_road, add_junction. The `fix` of a validation issue can be passed as is.",
+            description: "Apply a list of vectormap commands atomically (all or nothing). Each command is an object with an `op` field: build_road, add_connector, set_boundary_geometry, add_lane, remove_lane, remove_entity, connect_lanes, disconnect_lanes, set_neighbor, split_lane, merge_lanes, add_stop_line, add_traffic_signal, add_crosswalk, set_speed_limit, set_turn_direction, set_lane_kind, set_boundary_kind, set_attribute, add_road, add_junction. The `fix` of a validation issue can be passed as is.",
             input_schema: object(
                 json!({
                     "commands": {
@@ -955,7 +1021,40 @@ fn edit(session: &mut Session, op: &str, mut args: Value) -> Result<Value, ToolE
         .insert("op".into(), Value::String(op.into()));
     let command: Command = serde_json::from_value(args)
         .map_err(|e| invalid(format!("invalid arguments for {op}: {e}")))?;
-    apply(session, vec![command])
+    let mut result = apply(session, vec![command])?;
+    if op == "build_road" {
+        result["lanes"] = road_chains(session.map()?, &result["changes"]);
+    }
+    Ok(result)
+}
+
+/// The lanes a `build_road` created, as one chain of pieces per lane of the
+/// cross-section (left to right, each in its direction of travel).
+fn road_chains(map: &Map, changes: &Value) -> Value {
+    let created: Vec<LaneId> = changes["created"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|e| e["kind"] == "lane")
+        .filter_map(|e| e["id"].as_u64().map(LaneId))
+        .collect();
+    // Lanes are numbered left to right before the road is cut, so the heads
+    // (pieces without a predecessor in the road) come out in order.
+    let chains: Vec<Vec<LaneId>> = created
+        .iter()
+        .filter(|l| !map.predecessors(**l).iter().any(|p| created.contains(p)))
+        .map(|&head| {
+            let mut chain = vec![head];
+            while let [next] = map.successors(*chain.last().expect("non-empty")) {
+                if !created.contains(next) || chain.contains(next) {
+                    break;
+                }
+                chain.push(*next);
+            }
+            chain
+        })
+        .collect();
+    serde_json::to_value(chains).unwrap_or(Value::Null)
 }
 
 fn apply_commands(session: &mut Session, args: &Value) -> Result<Value, ToolError> {

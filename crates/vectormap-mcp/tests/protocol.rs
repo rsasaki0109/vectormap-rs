@@ -353,3 +353,64 @@ fn stdio_transport() {
         4
     );
 }
+
+#[test]
+fn building_a_map_from_scratch() {
+    let mut c = Client::new();
+    c.ok("new_map", json!({"name": "built"}));
+    // A two-way road along a driven path (forward on the left), cut in two.
+    let road = c.ok(
+        "build_road",
+        json!({
+            "reference": [[0, 0, 0], [30, 0.5, 0], [60, 0, 0]],
+            "lanes": [{"width": 3.5}, {"width": 3.5, "direction": "backward"}],
+            "segment_length": 30,
+            "speed_limit": {"kmh": 40}
+        }),
+    );
+    let chains = road["lanes"].as_array().unwrap();
+    assert_eq!(chains.len(), 2);
+    assert!(chains.iter().all(|c| c.as_array().unwrap().len() == 2));
+    let last = chains[0][1].as_u64().unwrap();
+    // A second road going north from beyond the end, joined by a left turn.
+    let north = c.ok(
+        "build_road",
+        json!({
+            "reference": [[70, 10], [70, 50]],
+            "lanes": [{"width": 3.5}],
+            "speed_limit": {"kmh": 30}
+        }),
+    );
+    let first_north = north["lanes"][0][0].as_u64().unwrap();
+    let connector = c.ok("add_connector", json!({"from": last, "to": first_north}));
+    let new_lane = connector["changes"]["created"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["kind"] == "lane")
+        .unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    let lane = c.ok("get_lane", json!({"lane": new_lane}));
+    assert_eq!(lane["lane"]["turn_direction"], "left", "{lane}");
+    assert_eq!(
+        c.err(
+            "build_road",
+            json!({"reference": [[0, 0], [1, 0]], "lanes": []})
+        ),
+        "invalid_argument"
+    );
+
+    let report = c.ok("validate_map", json!({"autoware": true}));
+    assert_eq!(report["counts"]["errors"], 0, "{report}");
+    assert_eq!(report["counts"]["warnings"], 0, "{report}");
+    let dir = tempfile::tempdir().unwrap();
+    let out = dir.path().join("lanelet2_map.osm");
+    c.ok(
+        "export_lanelet2",
+        json!({"path": out.to_str().unwrap(), "autoware": true}),
+    );
+    assert!(dir.path().join("map_projector_info.yaml").exists());
+    let reopened = c.ok("open_map", json!({"path": out.to_str().unwrap()}));
+    assert_eq!(reopened["summary"]["counts"]["lanes"], 6);
+}

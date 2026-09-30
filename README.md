@@ -52,6 +52,10 @@ it*:
 - **Topology** — stored separately from geometry: predecessors, successors,
   left/right neighbors (same or opposite direction), always kept symmetric;
   inference from geometry for formats with implicit topology.
+- **Building** — `build_road` lays out a whole road along a reference line
+  (a driven path, a road centre, observed lane markings): lanes in both
+  directions with shared boundaries, neighbors and connected pieces;
+  `add_connector` joins lanes through junctions with smooth turning lanes.
 - **Editing API** — `add_lane`, `remove_lane`, `connect`, `disconnect`,
   `set_neighbor`, `split_lane` (splits the whole lateral group),
   `merge_lanes`, `add_stop_line`, `add_traffic_signal`, `add_crosswalk`,
@@ -73,7 +77,7 @@ it*:
 - **JSON IR** — lossless, deterministic, readable by humans and LLMs.
 - **Deterministic** — same input + same commands ⇒ byte-identical output.
 - **MCP server** — `vectormap mcp` exposes the map to Claude Code and other
-  MCP clients as 22 tools (`get_map_summary`, `find_nearest_lane`,
+  MCP clients as 25 tools (`get_map_summary`, `find_nearest_lane`, `build_road`,
   `split_lane`, `add_traffic_light`, `validate_map`, `export_lanelet2`, ...)
   with undo; see [docs/mcp.md](docs/mcp.md).
 - **CLI** — `vectormap info | validate | convert | edit | lane | nearest | sample | mcp`.
