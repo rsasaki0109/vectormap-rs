@@ -83,11 +83,13 @@ pub enum ProjectionChoice {
     ///
     /// 1. every node has `local_x` / `local_y` and lat/lon are placeholders
     ///    (Autoware `Local` maps): use the local tags, no georeference;
-    /// 2. every node has local tags that are consistent with lat/lon under a
+    /// 2. `mgrs_code` tags identify a single UTM grid square: project lat/lon
+    ///    into that square and retain MGRS for export;
+    /// 3. every node has local tags that are consistent with lat/lon under a
     ///    UTM or transverse Mercator projection (files written by
     ///    vectormap-rs, Autoware MGRS maps): use the local tags and the
     ///    recovered georeference;
-    /// 3. otherwise: project lat/lon with UTM relative to the south-west
+    /// 4. otherwise: project lat/lon with UTM relative to the south-west
     ///    corner of the data.
     #[default]
     Auto,

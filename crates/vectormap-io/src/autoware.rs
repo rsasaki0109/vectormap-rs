@@ -51,6 +51,8 @@ pub mod codes {
     pub const UNMODELED_RULE: IssueCode = IssueCode::new("autoware.unmodeled_rule");
     /// No georeference: the `Local` projector will be used.
     pub const LOCAL_PROJECTOR: IssueCode = IssueCode::new("autoware.local_projector");
+    /// MGRS origin is polar/invalid, or geometry leaves its 100 km square.
+    pub const MGRS_GRID: IssueCode = IssueCode::new("autoware.mgrs_grid");
     /// A crosswalk is not crossed by any lane.
     pub const CROSSWALK_WITHOUT_LANES: IssueCode =
         IssueCode::new("autoware.crosswalk_without_lanes");
@@ -223,6 +225,31 @@ pub fn check(map: &Map) -> Vec<Issue> {
                 .into(),
         ));
     }
+    if let Some(g) = map
+        .metadata()
+        .georeference
+        .filter(|g| g.projection == ProjectionKind::Mgrs)
+    {
+        let grid = crate::projection::mgrs_grid(g.origin);
+        let projector = crate::projection::LocalProjector::new(g);
+        let points = map
+            .boundaries()
+            .flat_map(|b| &b.geometry.points)
+            .chain(map.stop_lines().flat_map(|s| &s.geometry.points))
+            .chain(map.traffic_signals().flat_map(|s| &s.geometry.points))
+            .copied()
+            .chain(map.crosswalks().flat_map(|c| c.outline().points));
+        if grid.is_none()
+            || points
+                .into_iter()
+                .any(|p| crate::projection::mgrs_grid(projector.inverse(p)) != grid)
+        {
+            issues.push(Issue::error(
+                codes::MGRS_GRID,
+                "MGRS geometry must stay within the origin's single UTM grid square",
+            ));
+        }
+    }
     issues
 }
 
@@ -230,14 +257,20 @@ pub fn check(map: &Map) -> Vec<Issue> {
 ///
 /// - [`ProjectionKind::Utm`] → `LocalCartesianUTM`
 /// - [`ProjectionKind::TransverseMercator`] → `TransverseMercator`
+/// - [`ProjectionKind::Mgrs`] → `MGRS` with `mgrs_grid`
 /// - no georeference → `Local`
 pub fn projector_info_yaml(georeference: Option<GeoReference>) -> String {
     match georeference {
         None => "projector_type: Local\n".to_string(),
         Some(g) => {
+            if g.projection == ProjectionKind::Mgrs {
+                let grid = crate::projection::mgrs_grid(g.origin).unwrap_or_default();
+                return format!("projector_type: MGRS\nvertical_datum: WGS84\nmgrs_grid: {grid}\n");
+            }
             let ty = match g.projection {
                 ProjectionKind::Utm => "LocalCartesianUTM",
                 ProjectionKind::TransverseMercator => "TransverseMercator",
+                ProjectionKind::Mgrs => unreachable!(),
             };
             format!(
                 "projector_type: {ty}\nvertical_datum: WGS84\nmap_origin:\n  latitude: {:?}\n  \

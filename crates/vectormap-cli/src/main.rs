@@ -154,6 +154,8 @@ enum ProjectionArg {
     Utm,
     /// Transverse Mercator centred on the origin.
     Tm,
+    /// MGRS coordinates in the origin's 100 km UTM square.
+    Mgrs,
 }
 
 #[derive(Args)]
@@ -221,6 +223,7 @@ fn load(path: &Path, input: &InputArgs) -> Result<(Map, Vec<Issue>)> {
                     projection: match input.projection {
                         ProjectionArg::Utm => ProjectionKind::Utm,
                         ProjectionArg::Tm => ProjectionKind::TransverseMercator,
+                        ProjectionArg::Mgrs => ProjectionKind::Mgrs,
                     },
                     origin,
                 })

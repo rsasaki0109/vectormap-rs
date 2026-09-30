@@ -194,7 +194,9 @@ to out/lanelet2_map.osm"*. Details: [docs/mcp.md](docs/mcp.md).
 
 Formats are detected from the extension (`.osm` → Lanelet2, `.json` → IR) or
 given with `--from` / `--to`. Lanelet2 input options: `--origin LAT,LON`
-(`--projection utm|tm`) or `--local` to force how coordinates are obtained.
+(`--projection utm|tm|mgrs`) or `--local` to force how coordinates are obtained.
+MGRS maps with `mgrs_code` node tags retain their 100 km grid frame automatically;
+Autoware export writes `projector_type: MGRS` and its grid identifier.
 
 ## Supported Formats
 

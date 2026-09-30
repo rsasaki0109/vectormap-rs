@@ -10,6 +10,8 @@
 //!   (Lanelet2 `UtmProjector`, Autoware `LocalCartesianUTM`);
 //! - [`ProjectionKind::TransverseMercator`]: central meridian through the
 //!   origin, origin at (0, 0) (Autoware `TransverseMercator`).
+//! - [`ProjectionKind::Mgrs`]: UTM coordinates within the 100 km square
+//!   containing the origin (Autoware `MGRS`); only single UTM grids are supported.
 //!
 //! Elevation is passed through unchanged (`z = ele`), as Lanelet2 does.
 
@@ -162,6 +164,37 @@ pub fn utm_central_meridian(zone: u8) -> f64 {
     f64::from(zone) * 6.0 - 183.0
 }
 
+/// The UTM-based MGRS 100 km grid identifier of a geographic position.
+/// Returns `None` for non-finite coordinates or polar UPS positions.
+pub fn mgrs_grid(p: GeoPoint) -> Option<String> {
+    if !p.lat.is_finite()
+        || !p.lon.is_finite()
+        || !(-80.0..84.0).contains(&p.lat)
+        || !(-180.0..=180.0).contains(&p.lon)
+    {
+        return None;
+    }
+    let zone = utm_zone(p.lat, p.lon);
+    let tm = TransverseMercator::new(utm_central_meridian(zone), UTM_K0);
+    let (e, n) = tm.forward(p.lat, p.lon);
+    let column = ((e + 500_000.0) / 100_000.0).floor() as usize;
+    if !(1..=8).contains(&column) {
+        return None;
+    }
+    let northing = n + if p.lat < 0.0 { 10_000_000.0 } else { 0.0 };
+    let row = (northing / 100_000.0).floor() as usize;
+    let columns = [b"ABCDEFGH", b"JKLMNPQR", b"STUVWXYZ"];
+    let rows = b"ABCDEFGHJKLMNPQRSTUV";
+    let bands = b"CDEFGHJKLMNPQRSTUVWX";
+    let band = (((p.lat + 80.0) / 8.0).floor() as usize).min(19);
+    Some(format!(
+        "{zone:02}{}{}{}",
+        bands[band] as char,
+        columns[usize::from((zone - 1) % 3)][column - 1] as char,
+        rows[(row + if zone & 1 == 0 { 5 } else { 0 }) % 20] as char
+    ))
+}
+
 /// Maps between WGS84 and a map's local frame.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LocalProjector {
@@ -175,11 +208,22 @@ impl LocalProjector {
     pub fn new(georeference: GeoReference) -> Self {
         let o = georeference.origin;
         let lon0 = match georeference.projection {
-            ProjectionKind::Utm => utm_central_meridian(utm_zone(o.lat, o.lon)),
+            ProjectionKind::Utm | ProjectionKind::Mgrs => {
+                utm_central_meridian(utm_zone(o.lat, o.lon))
+            }
             ProjectionKind::TransverseMercator => o.lon,
         };
         let tm = TransverseMercator::new(lon0, UTM_K0);
-        let offset = tm.forward(o.lat, o.lon);
+        let (e, n) = tm.forward(o.lat, o.lon);
+        let offset = if georeference.projection == ProjectionKind::Mgrs {
+            // UTM false easting and southern false northing are whole grid tiles.
+            (
+                (e + 500_000.0).div_euclid(100_000.0) * 100_000.0 - 500_000.0,
+                n.div_euclid(100_000.0) * 100_000.0,
+            )
+        } else {
+            (e, n)
+        };
         Self {
             tm,
             offset,
@@ -281,6 +325,42 @@ pub fn recover_georeference(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn mgrs_matches_independent_utm_reference_values() {
+        // WGS84 UTM coordinates from PROJ, reduced to the 100 km square.
+        for (lat, lon, grid, x, y) in [
+            (
+                35.90204788913,
+                139.93223216702,
+                "54SVE",
+                3643.9996002302,
+                73610.756300225,
+            ),
+            (
+                -33.8688,
+                151.2093,
+                "56HLH",
+                34368.633648097,
+                50948.345385009,
+            ),
+        ] {
+            let origin = GeoPoint::new(lat, lon);
+            assert_eq!(mgrs_grid(origin).as_deref(), Some(grid));
+            let p = LocalProjector::new(GeoReference {
+                projection: ProjectionKind::Mgrs,
+                origin,
+            });
+            let q = p.forward(origin);
+            assert!((q.x - x).abs() < 0.001 && (q.y - y).abs() < 0.001, "{q:?}");
+            let back = p.inverse(Point3::new(x, y, 19.5));
+            assert!((back.lat - lat).abs() < 1e-8 && (back.lon - lon).abs() < 1e-8);
+            assert_eq!(back.alt, 19.5);
+        }
+        for lat in [-90.0, 84.0, f64::NAN] {
+            assert!(mgrs_grid(GeoPoint::new(lat, 0.0)).is_none());
+        }
+    }
+
     #[test]
     fn georeference_recovery() {
         for projection in [ProjectionKind::Utm, ProjectionKind::TransverseMercator] {

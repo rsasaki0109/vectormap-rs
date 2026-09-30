@@ -140,7 +140,7 @@ fn origin_arg() -> Value {
 }
 
 fn projection_arg() -> Value {
-    json!({"enum": ["utm", "transverse_mercator"], "description": "projection used with origin (default utm)"})
+    json!({"enum": ["utm", "transverse_mercator", "mgrs"], "description": "projection used with origin (default utm); mgrs origin identifies a 100 km UTM grid square"})
 }
 
 // ---------------------------------------------------------------------------
@@ -664,8 +664,14 @@ fn georeference_arg(args: &Value) -> Result<Option<GeoReference>, ToolError> {
     let projection = match str_arg(args, "projection")? {
         None | Some("utm") => ProjectionKind::Utm,
         Some("transverse_mercator") => ProjectionKind::TransverseMercator,
+        Some("mgrs") => ProjectionKind::Mgrs,
         Some(other) => return Err(invalid(format!("unknown projection {other:?}"))),
     };
+    if projection == ProjectionKind::Mgrs && vectormap_io::projection::mgrs_grid(origin).is_none() {
+        return Err(invalid(
+            "MGRS origin must identify a non-polar UTM grid square",
+        ));
+    }
     Ok(Some(GeoReference { projection, origin }))
 }
 
