@@ -8,8 +8,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use vectormap_core::{
-    Attributes, Crosswalk, EntityRef, GeoPoint, Issue, Lane, Map, Point3, Polyline3, Rule,
-    TrafficSignal,
+    Attributes, Crosswalk, EntityRef, GeoPoint, Issue, Lane, Map, Point3, Polyline3,
+    ProjectionKind, Rule, TrafficSignal,
 };
 
 use super::osm::{self, MemberType, OsmData, OsmMember, OsmNode, OsmRelation, OsmWay, Tags};
@@ -695,6 +695,14 @@ impl<'a> Writer<'a> {
     fn node_tags(&self, p: Point3) -> Tags {
         let mut tags = Tags::new();
         set(&mut tags, "ele", fmt_coord(p.z));
+        if let Some(projector) = self
+            .projector
+            .filter(|p| p.georeference().projection == ProjectionKind::Mgrs)
+        {
+            if let Some(grid) = crate::projection::mgrs_grid(projector.inverse(p)) {
+                set(&mut tags, "mgrs_code", grid);
+            }
+        }
         if self.local_coordinates {
             set(&mut tags, "local_x", fmt_coord(p.x));
             set(&mut tags, "local_y", fmt_coord(p.y));
@@ -752,6 +760,20 @@ impl<'a> Writer<'a> {
         let g = self
             .projector
             .map_or(GeoPoint::new(0.0, 0.0), |pr| pr.inverse(p));
+        if let Some(projector) = self
+            .projector
+            .filter(|pr| pr.georeference().projection == ProjectionKind::Mgrs)
+        {
+            let grid = crate::projection::mgrs_grid(projector.georeference().origin);
+            if (grid.is_none() || crate::projection::mgrs_grid(g) != grid)
+                && !self.issues.iter().any(|i| i.code == codes::PROJECTION)
+            {
+                self.issues.push(Issue::error(
+                    codes::PROJECTION,
+                    "MGRS export contains coordinates outside the origin's supported grid square",
+                ));
+            }
+        }
         self.data.nodes.insert(
             id,
             OsmNode {

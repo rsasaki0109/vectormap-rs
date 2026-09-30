@@ -55,7 +55,11 @@ vectormap sample intersection demo.json     # a sample map
 `projection` is `utm` (UTM zone of the origin, coordinates relative to the
 origin — Lanelet2 `UtmProjector`, Autoware `LocalCartesianUTM`) or
 `transverse_mercator` (central meridian through the origin, Autoware
-`TransverseMercator`). Without a georeference the map lives in a purely
+`TransverseMercator`), or `mgrs` (coordinates within a 100 km UTM square,
+Autoware `MGRS`). For `mgrs`, the origin is any geographic position within
+the chosen square; it identifies the zone, hemisphere and square, rather
+than local (0, 0). Polar UPS grids and maps spanning multiple squares are
+unsupported. Without a georeference the map lives in a purely
 local frame.
 
 ## boundaries

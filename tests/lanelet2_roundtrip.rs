@@ -19,6 +19,72 @@ fn samples() -> Vec<(&'static str, Map)> {
     ]
 }
 
+#[test]
+fn mgrs_maps_keep_their_grid_and_coordinates_without_local_tags() {
+    let mut map = Map::new();
+    map.metadata_mut().georeference = Some(GeoReference {
+        projection: ProjectionKind::Mgrs,
+        origin: GeoPoint::new(35.90204788913, 139.93223216702),
+    });
+    map.build_road(NewRoad::new(
+        Polyline3::new(vec![
+            Point3::new(3644.0, 73610.0, 19.5),
+            Point3::new(3684.0, 73610.0, 19.5),
+        ]),
+        vec![RoadLane::new(3.5, LaneDirection::Forward)],
+    ))
+    .unwrap();
+    let (osm, issues) = lanelet2::write_string(
+        &map,
+        &SaveOptions {
+            local_coordinates: Some(false),
+            ..SaveOptions::autoware()
+        },
+    );
+    assert!(issues.is_empty(), "{issues:?}");
+    assert!(osm.contains("mgrs_code"));
+    assert!(!osm.contains("local_x"));
+    let loaded = read(&osm, ProjectionChoice::Auto);
+    assert_eq!(
+        loaded.map.metadata().georeference.unwrap().projection,
+        ProjectionKind::Mgrs
+    );
+    let expected = "projector_type: MGRS\nvertical_datum: WGS84\nmgrs_grid: 54SVE\n";
+    assert_eq!(
+        autoware::projector_info_yaml(loaded.map.metadata().georeference),
+        expected
+    );
+    let original: Vec<_> = map.boundaries().collect();
+    for (a, b) in original.iter().zip(loaded.map.boundaries()) {
+        for (x, y) in a.geometry.points.iter().zip(&b.geometry.points) {
+            assert!(x.distance(*y) < 0.001, "{x:?} != {y:?}");
+        }
+    }
+    let (again, _) = lanelet2::write_string(&loaded.map, &SaveOptions::autoware());
+    assert_eq!(
+        read(&again, ProjectionChoice::Auto)
+            .map
+            .metadata()
+            .georeference
+            .unwrap()
+            .projection,
+        ProjectionKind::Mgrs
+    );
+    let invalid = osm.replace("54SVE", "54SWE");
+    assert!(lanelet2::read_str(&invalid, &LoadOptions::default()).is_err());
+    assert_eq!(json::from_str(&json::to_string(&map)).unwrap().map, map);
+    let boundary = map.boundaries().next().unwrap().id;
+    map.boundary_mut(boundary).unwrap().geometry.points[0].x += 100_000.0;
+    assert!(
+        autoware::check(&map)
+            .iter()
+            .any(|i| i.code == autoware::codes::MGRS_GRID)
+    );
+    let (outside, issues) = lanelet2::write_string(&map, &SaveOptions::autoware());
+    assert!(issues.iter().any(|i| i.severity == Severity::Error));
+    assert!(lanelet2::read_str(&outside, &LoadOptions::default()).is_err());
+}
+
 fn read(osm: &str, projection: ProjectionChoice) -> vectormap::io::Loaded {
     lanelet2::read_str(
         osm,

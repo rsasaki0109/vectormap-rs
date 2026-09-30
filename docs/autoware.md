@@ -25,7 +25,7 @@ format documentation and the `autoware_map_loader` /
 | Stop lines | `stop_line` way; stop signs as RE `traffic_sign` (`refers` a `stop_sign` way, `ref_line`); `road_marking` RE for guide stop lines | `Rule::TrafficSign { sign_type: "stop_sign" }` (default of `add_stop_line`), `Rule::StopLine` ⇄ `road_marking` (`autoware.stop_line_as_road_marking` info) |
 | Crosswalks | lanelet `subtype=crosswalk`, `participant:pedestrian=yes`, `one_way=no`; RE `crosswalk` with `refers`, `ref_line`, `crosswalk_polygon`, referenced by the crossing road lanelets | `Crosswalk` + `Rule::Crosswalk` |
 | Coordinates | every node has `ele`; lat/lon must be correct (all projectors except `Local` read them); `local_x`/`local_y` only read by `Local` | always written; lat/lon from the georeference; `local_x`/`local_y` written |
-| Projection | `map_projector_info.yaml`: `projector_type` (`MGRS`, `LocalCartesianUTM`, `LocalCartesian`, `TransverseMercator`, `Local`), `vertical_datum`, `map_origin` | `utm` → `LocalCartesianUTM`, `transverse_mercator` → `TransverseMercator`, none → `Local` |
+| Projection | `map_projector_info.yaml`: `projector_type`, `vertical_datum`, `map_origin` or `mgrs_grid` | `mgrs` → `MGRS` with its grid identifier, `utm` → `LocalCartesianUTM`, `transverse_mercator` → `TransverseMercator`, none → `Local` |
 
 ## Compatibility check
 
@@ -43,11 +43,16 @@ format documentation and the `autoware_map_loader` /
 | `autoware.unsupported_lane_kind` | info |
 | `autoware.stop_line_as_road_marking` | info |
 | `autoware.local_projector` | info |
+| `autoware.mgrs_grid` | error |
 
 ## Known gaps
 
-- MGRS output (`projector_type: MGRS`) is not generated; UTM / TM origins
-  are used instead. MGRS maps can be *read*: their local frame is recovered.
+- MGRS uses a single UTM-based 100 km grid square. `mgrs_code` node tags
+  select it automatically; an explicit MGRS origin selects the square
+  containing that point. The writer retains lat/lon and emits `mgrs_code`
+  with the grid prefix (precision zero). Polar UPS grids and maps spanning
+  multiple grid squares are unsupported. Geometry leaving the selected
+  square produces an error on export and in the Autoware check.
 - Detection areas, no-stopping areas, speed bumps, virtual traffic lights,
   bus stops, parking lots and `MetaInfo` are not modelled yet; they are
   reported on import (`lanelet2.unsupported_*`).

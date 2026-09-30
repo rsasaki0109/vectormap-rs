@@ -26,6 +26,10 @@ pub enum ProjectionKind {
     /// Transverse Mercator centred on the origin's meridian, with the origin
     /// at (0, 0) (Autoware `TransverseMercator`).
     TransverseMercator,
+    /// UTM-based MGRS coordinates within the origin's 100 km grid square.
+    /// The origin identifies the square, rather than the local (0, 0).
+    /// Polar UPS grids and maps spanning multiple squares are unsupported.
+    Mgrs,
 }
 
 /// A WGS84 geographic position.

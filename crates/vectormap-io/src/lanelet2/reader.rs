@@ -15,7 +15,7 @@ use super::tags::{
     parse_color, parse_speed, parse_turn, signal_kind_from_subtype, signal_subtype,
 };
 use super::{ATTRIBUTE_PREFIX, LoadOptions, ProjectionChoice, codes};
-use crate::projection::{LocalProjector, recover_georeference};
+use crate::projection::{LocalProjector, mgrs_grid, recover_georeference};
 use crate::{IoError, Loaded};
 
 /// Parses Lanelet2 OSM XML into a map.
@@ -177,6 +177,52 @@ impl<'a> Reader<'a> {
                 ));
                 (true, None)
             }
+            ProjectionChoice::Auto if nodes.values().any(|n| n.tags.contains_key("mgrs_code")) => {
+                let node = nodes
+                    .values()
+                    .find(|n| n.tags.contains_key("mgrs_code"))
+                    .unwrap();
+                let origin = GeoPoint::new(node.lat, node.lon);
+                let grid = mgrs_grid(origin).ok_or_else(|| {
+                    IoError::Format(
+                        "MGRS requires a finite geographic position in a UTM grid (80 S to 84 N)"
+                            .into(),
+                    )
+                })?;
+                for n in nodes.values() {
+                    if mgrs_grid(GeoPoint::new(n.lat, n.lon)).as_deref() != Some(&grid) {
+                        return Err(IoError::Format("MGRS maps spanning multiple grid squares are unsupported; choose a continuous projection explicitly".into()));
+                    }
+                    if let Some(code) = n.tags.get("mgrs_code") {
+                        let suffix = code.strip_prefix(&grid).ok_or_else(|| {
+                            IoError::Format(format!(
+                                "node {} mgrs_code does not match its latitude/longitude",
+                                n.id
+                            ))
+                        })?;
+                        if suffix.len() > 10
+                            || suffix.len() % 2 != 0
+                            || !suffix.bytes().all(|b| b.is_ascii_digit())
+                        {
+                            return Err(IoError::Format(format!(
+                                "node {} has an invalid mgrs_code",
+                                n.id
+                            )));
+                        }
+                    }
+                }
+                self.issues.push(Issue::info(
+                    codes::PROJECTION,
+                    format!("coordinates projected in MGRS grid {grid}"),
+                ));
+                (
+                    false,
+                    Some(GeoReference {
+                        projection: ProjectionKind::Mgrs,
+                        origin,
+                    }),
+                )
+            }
             ProjectionChoice::Auto => {
                 let pairs: Vec<(f64, f64, f64, f64)> = if all_local {
                     nodes
@@ -233,6 +279,18 @@ impl<'a> Reader<'a> {
                 }
             }
         };
+        if let Some(g) = georef.filter(|g| g.projection == ProjectionKind::Mgrs) {
+            let grid = mgrs_grid(g.origin)
+                .ok_or_else(|| IoError::Format("unsupported MGRS origin".into()))?;
+            if nodes
+                .values()
+                .any(|n| mgrs_grid(GeoPoint::new(n.lat, n.lon)).as_deref() != Some(&grid))
+            {
+                return Err(IoError::Format(
+                    "MGRS nodes must remain in the origin's grid square".into(),
+                ));
+            }
+        }
         if use_local_tags {
             for n in nodes.values() {
                 let (x, y) = local(n).ok_or_else(|| {

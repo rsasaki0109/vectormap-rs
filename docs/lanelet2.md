@@ -70,14 +70,17 @@ On load (`ProjectionChoice::Auto`):
 
 1. all nodes have `local_x`/`local_y` and lat/lon are placeholders (Autoware
    `Local` maps) → local tags, no georeference;
-2. all nodes have local tags consistent with lat/lon under UTM or transverse
-   Mercator (files written by vectormap-rs, Autoware MGRS maps) → local tags
-   plus the recovered georeference (for MGRS maps this is the grid corner);
-3. otherwise → lat/lon projected with UTM relative to the south-west corner
+2. `mgrs_code` node tags identify one UTM-based 100 km square → lat/lon
+   projected within that square, preserving MGRS on export. The tags are
+   checked against lat/lon; invalid tags, polar UPS grids and multiple grid
+   squares are rejected;
+3. all nodes have local tags consistent with lat/lon under UTM or transverse
+   Mercator → local tags plus the recovered georeference;
+4. otherwise → lat/lon projected with UTM relative to the south-west corner
    of the data (recorded as the map's georeference).
 
 `ProjectionChoice::Georeferenced(..)` and `ProjectionChoice::LocalTags`
-force a behaviour (`vectormap --origin LAT,LON [--projection tm]`,
+force a behaviour (`vectormap --origin LAT,LON [--projection utm|tm|mgrs]`,
 `vectormap --local`).
 
 On save, lat/lon are computed from the map's georeference. Maps without a
