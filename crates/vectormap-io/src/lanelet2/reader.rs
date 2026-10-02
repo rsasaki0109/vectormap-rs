@@ -48,6 +48,8 @@ struct Reader<'a> {
     consumed_relations: BTreeSet<i64>,
     /// Regulatory element relation → lanes referencing it.
     rule_lanes: BTreeMap<i64, Vec<LaneId>>,
+    /// Regulatory element relation → crosswalk lanelets referencing it.
+    rule_crosswalks: BTreeMap<i64, Vec<CrosswalkId>>,
     /// Lanelet relation → crosswalk created from it.
     crosswalks: BTreeMap<i64, CrosswalkId>,
     /// Lanelet relation → lane created from it.
@@ -130,6 +132,7 @@ impl<'a> Reader<'a> {
             consumed_ways: BTreeSet::new(),
             consumed_relations: BTreeSet::new(),
             rule_lanes: BTreeMap::new(),
+            rule_crosswalks: BTreeMap::new(),
             crosswalks: BTreeMap::new(),
             lanes: BTreeMap::new(),
             junction_lanes: BTreeMap::new(),
@@ -534,16 +537,9 @@ impl<'a> Reader<'a> {
         };
         if self.map.insert_crosswalk(crosswalk).is_ok() {
             self.crosswalks.insert(rel.id, id);
-        }
-        for re in rel.members(MemberType::Relation, "regulatory_element") {
-            self.issues.push(Issue::warning(
-                codes::UNSUPPORTED_MEMBER,
-                format!(
-                    "crosswalk lanelet {} references regulatory element {re}; rules applying to \
-                     crosswalks are not represented",
-                    rel.id
-                ),
-            ));
+            for re in rel.members(MemberType::Relation, "regulatory_element") {
+                self.rule_crosswalks.entry(re).or_default().push(id);
+            }
         }
     }
 
@@ -712,6 +708,13 @@ impl<'a> Reader<'a> {
             let mut lanes = self.rule_lanes.get(&rel.id).cloned().unwrap_or_default();
             lanes.sort();
             lanes.dedup();
+            let mut controlled_crosswalks = self
+                .rule_crosswalks
+                .get(&rel.id)
+                .cloned()
+                .unwrap_or_default();
+            controlled_crosswalks.sort();
+            controlled_crosswalks.dedup();
             let skip: &[&str] = if matches!(rule, Rule::Other { .. }) {
                 &["type"]
             } else {
@@ -721,6 +724,7 @@ impl<'a> Reader<'a> {
                 id,
                 rule,
                 lanes,
+                controlled_crosswalks,
                 attributes: prefixed(&rel.tags, skip),
             };
             let _ = self.map.insert_regulatory_element(re);

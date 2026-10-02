@@ -67,6 +67,7 @@ const EDIT_TOOLS: &[(&str, &str)] = &[
     ("add_stop_line", "add_stop_line"),
     ("add_traffic_light", "add_traffic_signal"),
     ("add_crosswalk", "add_crosswalk"),
+    ("set_regulatory_links", "set_regulatory_links"),
     ("set_speed_limit", "set_speed_limit"),
 ];
 
@@ -501,6 +502,17 @@ pub fn definitions() -> Vec<ToolDef> {
             destructive: false,
         },
         ToolDef {
+            name: "set_regulatory_links",
+            title: "Review equipment associations",
+            description: "Replace explicit lane, controlled-crosswalk and stop-line targets of an existing equipment rule. Pedestrian signals control crosswalks; vehicle signals control lanes. Empty targets retain an unresolved rule. IDs, physical geometry and lamps stay unchanged.",
+            input_schema: object(
+                json!({"regulatory_element":{"type":"integer","minimum":1},"lanes":{"type":"array","items":{"type":"integer","minimum":1}},"controlled_crosswalks":{"type":"array","items":{"type":"integer","minimum":1}},"stop_lines":{"type":"array","items":{"type":"integer","minimum":1}}}),
+                &["regulatory_element"],
+            ),
+            read_only: false,
+            destructive: false,
+        },
+        ToolDef {
             name: "add_crosswalk",
             title: "Add crosswalk",
             description: "Add a crosswalk. geometry {\"across\": {\"lane\": ID, \"station\": metres, \"width\": 4, \"margin\": 0.5}} spans the lane and all its lateral neighbors; or {\"edges\": {\"left_edge\": [...], \"right_edge\": [...]}}. Crossing lanes get a crosswalk rule (detected from geometry unless crossing_lanes is given); stop_line_offset creates stop lines that many metres before the crosswalk.",
@@ -545,7 +557,7 @@ pub fn definitions() -> Vec<ToolDef> {
         ToolDef {
             name: "apply_commands",
             title: "Apply commands",
-            description: "Apply a list of vectormap commands atomically (all or nothing). Each command is an object with an `op` field: build_road, add_connector, set_boundary_geometry, add_lane, remove_lane, remove_entity, connect_lanes, disconnect_lanes, set_neighbor, split_lane, merge_lanes, add_stop_line, add_traffic_signal, add_crosswalk, set_speed_limit, set_turn_direction, set_lane_kind, set_boundary_kind, set_attribute, add_road, add_junction. The `fix` of a validation issue can be passed as is.",
+            description: "Apply a list of vectormap commands atomically (all or nothing). Each command is an object with an `op` field: build_road, add_connector, set_boundary_geometry, add_lane, remove_lane, remove_entity, connect_lanes, disconnect_lanes, set_neighbor, split_lane, merge_lanes, add_stop_line, add_traffic_signal, add_crosswalk, set_regulatory_links, set_speed_limit, set_turn_direction, set_lane_kind, set_boundary_kind, set_attribute, add_road, add_junction. The `fix` of a validation issue can be passed as is.",
             input_schema: object(
                 json!({
                     "commands": {

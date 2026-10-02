@@ -13,6 +13,7 @@
 mod features;
 mod lane;
 mod merge;
+mod regulatory;
 mod road;
 mod split;
 

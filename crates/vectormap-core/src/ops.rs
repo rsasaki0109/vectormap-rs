@@ -19,7 +19,7 @@ use crate::edit::{
 };
 use crate::entities::{BoundaryKind, LaneKind, Side, SpeedLimit, TurnDirection};
 use crate::geometry::{Polygon3, Polyline3};
-use crate::id::{BoundaryId, EntityRef, LaneId};
+use crate::id::{BoundaryId, CrosswalkId, EntityRef, LaneId, RegulatoryElementId, StopLineId};
 use crate::map::Map;
 use crate::topology::Neighbor;
 
@@ -94,6 +94,20 @@ pub enum Command {
     AddTrafficSignal(NewTrafficSignal),
     /// [`Map::add_crosswalk`]
     AddCrosswalk(NewCrosswalk),
+    /// Change explicit control/crossing targets and stop-line links of an existing rule.
+    SetRegulatoryLinks {
+        /// Existing equipment rule; its physical feature references are preserved.
+        regulatory_element: RegulatoryElementId,
+        /// Controlled or crossing vehicle lanes.
+        #[serde(default)]
+        lanes: Vec<LaneId>,
+        /// Controlled pedestrian crosswalks, separate from vehicle lanes.
+        #[serde(default)]
+        controlled_crosswalks: Vec<CrosswalkId>,
+        /// Existing stop lines; at most one for a traffic light.
+        #[serde(default)]
+        stop_lines: Vec<StopLineId>,
+    },
     /// [`Map::set_speed_limit`]
     SetSpeedLimit {
         /// Lanes.
@@ -179,6 +193,7 @@ impl Command {
             Command::AddStopLine(_) => "add_stop_line",
             Command::AddTrafficSignal(_) => "add_traffic_signal",
             Command::AddCrosswalk(_) => "add_crosswalk",
+            Command::SetRegulatoryLinks { .. } => "set_regulatory_links",
             Command::SetSpeedLimit { .. } => "set_speed_limit",
             Command::SetTurnDirection { .. } => "set_turn_direction",
             Command::SetLaneKind { .. } => "set_lane_kind",
@@ -230,6 +245,17 @@ impl Map {
             Command::AddStopLine(spec) => self.add_stop_line(spec).map(|(_, cs)| cs),
             Command::AddTrafficSignal(spec) => self.add_traffic_signal(spec).map(|(_, cs)| cs),
             Command::AddCrosswalk(spec) => self.add_crosswalk(spec).map(|(_, cs)| cs),
+            Command::SetRegulatoryLinks {
+                regulatory_element,
+                lanes,
+                controlled_crosswalks,
+                stop_lines,
+            } => self.set_regulatory_links(
+                regulatory_element,
+                &lanes,
+                &controlled_crosswalks,
+                &stop_lines,
+            ),
             Command::SetSpeedLimit { lanes, kmh } => {
                 self.set_speed_limit(&lanes, kmh.map(SpeedLimit::from_kmh))
             }
