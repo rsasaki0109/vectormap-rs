@@ -337,6 +337,7 @@ impl Map {
                 id,
                 rule,
                 lanes,
+                controlled_crosswalks: Vec::new(),
                 attributes: Default::default(),
             },
         );
@@ -362,6 +363,16 @@ impl Map {
         }
         if let Some(g) = &spec.geometry {
             check_polyline("geometry", g)?;
+        }
+        if let Some(group) = spec.group
+            && self
+                .regulatory_element(group)
+                .is_some_and(|r| !r.controlled_crosswalks.is_empty())
+        {
+            return Err(EditError::invalid(
+                "group",
+                "lane-based creation cannot change a crosswalk-controlled group",
+            ));
         }
         let group_stop_line = match spec.group {
             Some(g) => match self.regulatory_elements.get(&g).map(|r| &r.rule) {

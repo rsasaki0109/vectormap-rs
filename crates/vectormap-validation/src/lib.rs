@@ -610,15 +610,34 @@ impl Validator<'_> {
             let owner: EntityRef = re.id.into();
             self.lane_refs(owner, "applies to", &re.lanes);
             self.lane_refs(owner, "rule", &re.rule.referenced_lanes());
-            if re.lanes.is_empty() {
+            if re.lanes.is_empty() && re.controlled_crosswalks.is_empty() {
                 self.push(
                     Issue::warning(
                         codes::ORPHAN_RULE,
-                        format!("{owner} does not apply to any lane"),
+                        format!("{owner} does not apply to any lane or crosswalk"),
                     )
                     .with_entity(owner)
                     .with_fix(Command::RemoveEntity { entity: owner }),
                 );
+            }
+            if !re.controlled_crosswalks.is_empty()
+                && (!re.lanes.is_empty()
+                    || !re.rule.stop_lines().is_empty()
+                    || !matches!(&re.rule, Rule::TrafficLight { signals, .. } if !signals.is_empty() && signals.iter().all(|id| map.traffic_signal(*id).is_some_and(|s| s.kind == vectormap_core::SignalKind::Pedestrian))))
+            {
+                self.push(Issue::error(codes::INCOMPLETE_RULE, format!("{owner} crosswalk control requires pedestrian lights without vehicle lanes or stop lines")).with_entity(owner));
+            }
+            for &c in &re.controlled_crosswalks {
+                if map.crosswalk(c).is_none() {
+                    self.push(
+                        Issue::error(
+                            codes::MISSING_REFERENCE,
+                            format!("{owner} controls {c}, which does not exist"),
+                        )
+                        .with_entity(owner)
+                        .with_related(c),
+                    );
+                }
             }
             for s in re.rule.stop_lines() {
                 if map.stop_line(s).is_none() {
@@ -969,6 +988,7 @@ mod tests {
                         stop_line: Some(StopLineId(501)),
                     },
                     lanes: vec![],
+                    controlled_crosswalks: vec![],
                     attributes: Default::default(),
                 });
             doc.lanes[0].speed_limit = Some(SpeedLimit::from_kmh(0.0));

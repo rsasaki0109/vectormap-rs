@@ -416,7 +416,7 @@ impl Map {
     /// - boundaries: rejected while a lane uses them;
     /// - stop lines: detached from rules; `stop_line` rules are deleted;
     /// - signals: removed from their rules; empty traffic-light rules are deleted;
-    /// - crosswalks: their crosswalk rules are deleted;
+    /// - crosswalks: yield rules are deleted and control targets detached;
     /// - roads, junctions, rules: removed without touching lanes.
     pub fn remove_entity(&mut self, entity: EntityRef) -> EditResult<ChangeSet> {
         if !self.contains(entity) {
@@ -503,6 +503,12 @@ impl Map {
             }
             EntityRef::Crosswalk(id) => {
                 self.crosswalks.remove(&id);
+                for re in self.regulatory_elements.values_mut() {
+                    if re.controlled_crosswalks.contains(&id) {
+                        re.controlled_crosswalks.retain(|c| *c != id);
+                        cs.modified(re.id);
+                    }
+                }
                 let to_delete: Vec<_> = self
                     .regulatory_elements
                     .values()

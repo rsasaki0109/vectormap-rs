@@ -163,14 +163,27 @@ pub fn check(map: &Map) -> Vec<Issue> {
         match &re.rule {
             Rule::TrafficLight {
                 stop_line: None, ..
-            } => issues.push(
-                code_issue(
-                    codes::TRAFFIC_LIGHT_WITHOUT_STOP_LINE,
-                    Warning,
-                    format!("traffic light {} has no stop line", re.id),
+            } if re.controlled_crosswalks.is_empty()
+                || !re.lanes.is_empty()
+                || re.rule.signals().is_empty()
+                || !re.rule.signals().iter().all(|s| {
+                    map.traffic_signal(*s)
+                        .is_some_and(|s| s.kind == vectormap_core::SignalKind::Pedestrian)
+                })
+                || !re
+                    .controlled_crosswalks
+                    .iter()
+                    .all(|c| map.crosswalk(*c).is_some()) =>
+            {
+                issues.push(
+                    code_issue(
+                        codes::TRAFFIC_LIGHT_WITHOUT_STOP_LINE,
+                        Warning,
+                        format!("traffic light {} has no stop line", re.id),
+                    )
+                    .with_entity(re.id),
                 )
-                .with_entity(re.id),
-            ),
+            }
             Rule::StopLine { .. } => issues.push(
                 code_issue(
                     codes::STOP_LINE_AS_ROAD_MARKING,

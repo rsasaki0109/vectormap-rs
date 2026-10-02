@@ -483,6 +483,17 @@ impl<'a> Writer<'a> {
                     role: role.into(),
                 });
             }
+            for re in self
+                .map
+                .regulatory_elements()
+                .filter(|r| r.controlled_crosswalks.contains(&c.id))
+            {
+                members.push(OsmMember {
+                    kind: MemberType::Relation,
+                    reference: self.id_of(re.id).expect("assigned"),
+                    role: "regulatory_element".into(),
+                });
+            }
             let mut tags = attribute_tags(
                 &c.attributes,
                 &["type", "subtype", "left_edge_type", "right_edge_type"],

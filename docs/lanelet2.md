@@ -119,3 +119,21 @@ Reported as structured issues rather than dropped silently:
 | `lanelet2.renumbered` | entities that could not keep their ID |
 | `lanelet2.geometry_synthesized` | placeholder geometry written (e.g. a stop sign) |
 | `lanelet2.dangling_reference` | export skipped a reference to a missing entity |
+
+### Reviewed pedestrian signal control
+
+`RegulatoryElement.controlled_crosswalks` contains the pedestrian lanelets controlled
+by a traffic-light rule. It is distinct from vehicle `lanes` and from the physical
+crosswalk referred to by a crossing/yield rule. Legacy JSON defaults to an empty
+list and omits that empty field. Lanelet2 writes each controlled crosswalk lanelet's
+`regulatory_element` membership and restores it on import, following the
+[Autoware format](https://github.com/autowarefoundation/autoware_lanelet2_extension/blob/main/autoware_lanelet2_extension/docs/lanelet2_format_extension.md).
+
+Use `set_regulatory_links` (Rust edit, JSON command or MCP tool) for explicit review.
+It validates all targets before mutation, rejects mixed vehicle/pedestrian control,
+and changes no physical geometry, lamps or source attributes. Empty targets retain
+an unresolved rule and produce an orphan warning. Removing a controlled crosswalk
+detaches its control references while retaining the observed signal head.
+A correctly associated pedestrian rule has no vehicle stop-line warning; unresolved
+or invalid control remains reported. These relationships are operator choices, not
+inferred legal control or lamp states.

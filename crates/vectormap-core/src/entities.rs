@@ -694,6 +694,10 @@ pub struct RegulatoryElement {
     /// Lanes the rule applies to.
     #[serde(default)]
     pub lanes: Vec<LaneId>,
+    /// Crosswalk lanelets controlled by this rule, e.g. pedestrian traffic lights.
+    /// Distinct from vehicle lanes and a `Rule::Crosswalk` yield target.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub controlled_crosswalks: Vec<CrosswalkId>,
     /// Extension attributes.
     #[serde(default, skip_serializing_if = "Attributes::is_empty")]
     pub attributes: Attributes,
